@@ -1,0 +1,29 @@
+// set up a simple neutral simulation
+initialize() {
+	initializeMutationRate(1e-7);
+	
+	// m1 mutation type: neutral
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	
+	// g1 genomic element type: uses m1 for all mutations
+	initializeGenomicElementType("g1", m1, 1.0);
+	
+	// uniform chromosome of length 100 kb with uniform recombination
+	initializeGenomicElement(g1, 0, 99999);
+	initializeRecombinationRate(0.5);
+}
+
+// create a population of 100 individuals
+1 early() {
+	sim.addSubpop("p1", 100);
+}
+
+
+10000:10050 late() {
+	gensToSample = seq(10000,10050, by=5);
+	if(any(gensToSample==community.tick))
+		//print(community.tick);
+		sim.outputFull();
+}
+
+

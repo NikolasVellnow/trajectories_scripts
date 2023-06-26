@@ -1,0 +1,41 @@
+// set up a simple neutral simulation
+initialize() {
+	initializeMutationRate(1e-7);
+	
+	// m1 mutation type: neutral
+	initializeMutationType("m1", $3, "f", 0.0);
+	
+	// g1 genomic element type: uses m1 for all mutations
+	initializeGenomicElementType("g1", m1, 1.0);
+	
+	// uniform chromosome of length 100 kb with uniform recombination
+	initializeGenomicElement(g1, 0, 99999);
+	initializeRecombinationRate($1);
+}
+
+// create a population of 400 individuals
+1 early() {
+	sim.addSubpop("p1", 400);
+}
+	
+mutationEffect(m1) {
+	if(homozygous)
+		return (1- $2* sim.mutationFrequencies(p1, mut)^2)/(1- $2* (1-sim.mutationFrequencies(p1, mut))^2);
+	else // for heterozygotes
+		return (1- $2* 2 * sim.mutationFrequencies(p1, mut)* (1-sim.mutationFrequencies(p1, mut)))/(1- $2* (1-sim.mutationFrequencies(p1, mut))^2);
+}
+
+
+10000:10400 late() {
+    m1.convertToSubstitution = F;		// allows to track mutations that get fixed from now on
+
+	gensToSample = seq(10000,10400, by=5);
+	if(any(gensToSample==community.tick)) {				
+		print(paste("generation:", asString(community.tick), sep=" "));
+		cat(paste("MutationIds: "));
+		print(sim.mutations.id);
+		cat(paste("MutationFreqs: "));
+		print(sim.subpopulations.genomes.mutationFrequenciesInGenomes(sim.mutations));
+	}
+}
+

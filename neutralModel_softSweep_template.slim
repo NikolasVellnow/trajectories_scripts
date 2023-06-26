@@ -1,0 +1,62 @@
+// set up a simple neutral simulation
+initialize() {
+	initializeMutationRate(1e-7);
+	
+	// m1 mutation type: neutral
+	initializeMutationType("m1", $3, "f", 0.0);
+	
+	// g1 genomic element type: uses m1 for all mutations
+	initializeGenomicElementType("g1", m1, 1.0);
+	
+	// uniform chromosome of length 100 kb with uniform recombination
+	initializeGenomicElement(g1, 0, 99999);
+	initializeRecombinationRate($1);
+}
+
+// create a population of 400 individuals
+1 early() {
+	sim.addSubpop("p1", 400);
+}
+
+// look for mutation with high enough frequency and change selection coefficient
+9999 late() {
+    m1.convertToSubstitution = F;		// allows to track mutations that get fixed from now on
+	muts = sim.mutationsOfType(m1);     // get mutations
+	mutsFreqs = sim.mutationFrequencies(p1, muts);  // get mutation frequencies
+    foundMut=F;
+	numMuts = size(mutsFreqs);
+	print(numMuts);
+	nums = seq(0, numMuts-1);
+	randNums = sample(nums, numMuts, replace = F);
+	for (i in 0:(numMuts-1)) {
+		randNum = randNums[i];		// take mutation at random position to not only take those at teh start of the chromosome
+		if (mutsFreqs[randNum] >0.2 & mutsFreqs[randNum] <0.8) {
+			print("We found mutation with ID " + muts[randNum].id + " and frequency " + mutsFreqs[randNum] + " at position " + randNum);  // info about mutation found
+			sim.mutations[randNum].setSelectionCoeff($2);		// set selection coefficient of found mutation
+            foundMut=T;
+			break;
+		}
+	}
+    if(foundMut==F) {
+        print("No mutation that fullfills condition found!");
+        sim.simulationFinished();
+    }
+}
+
+10000:10400 late() {
+	if(community.tick == 10000) {
+
+	}
+	gensToSample = seq(10000,10400, by=5);
+	if(any(gensToSample==community.tick)) {
+		print(paste("generation:", asString(community.tick), sep=" "));
+		cat(paste("MutationIds: "));
+		print(sim.mutations.id);
+		cat(paste("MutationFreqs: "));
+		print(sim.subpopulations.genomes.mutationFrequenciesInGenomes(sim.mutations));
+		//print(sim.subpopulations.genomes);
+		}
+	
+}
+
+

@@ -1,0 +1,105 @@
+// set up a simple neutral simulation
+initialize()
+{
+	initializeMutationRate(1e-8);
+	
+	// m1 mutation type: neutral
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	
+	// g1 genomic element type: uses m1 for all mutations
+	initializeGenomicElementType("g1", m1, 1.0);
+	
+	// uniform chromosome of length 100 kb with uniform recombination
+	initializeGenomicElement(g1, 0, 99999);
+	
+	// 0.5
+	initializeRecombinationRate(0.00001);
+}
+
+// create a population of 100 individuals
+1 early()
+{
+	sim.addSubpop("p1", 400);
+}
+
+9999:10400 late()
+{
+	if (community.tick == 9999)
+	{
+		m1.convertToSubstitution = F; // allows to track mutations that get fixed from now on
+		muts = sim.mutationsOfType(m1);
+		mutsFreqs = sim.mutationFrequencies(p1, muts);
+		foundMut = F;
+		for (i in 0:(size(mutsFreqs) - 1))
+		{
+			if (mutsFreqs[i] > 0.2 & mutsFreqs[i] < 0.8)
+			{
+				print("We found mutation with ID " + muts[i].id + " and frequency " + mutsFreqs[i] + " at position " + i);
+				foundMut = T;
+				defineConstant("focalMutId", muts[i].id);
+				break;
+			}
+		}
+		if (foundMut == F)
+		{
+			print("We did not find mutation that fullfills condition");
+			sim.simulationFinished();
+		}
+	}
+	
+	
+	muts = sim.mutationsOfType(m1);
+	mutsFreqs = sim.mutationFrequencies(p1, muts);
+	for (j in 0:(size(muts) - 1))
+	{
+		if (sim.mutations[j].id == focalMutId)
+		{
+			p = 1 - mutsFreqs[j];
+			q = mutsFreqs[j];
+		}
+	}
+	
+	inds = p1.individuals;
+	
+	// loop through individuals to assign fitness to genotypes
+	for (k in 0:(size(inds)-1))
+	{
+		ind = inds[k];
+		
+		// if focal individual is mt/mt:
+		if (any(ind.genome1.mutations.id == focalMutId) & any(ind.genome2.mutations.id == focalMutId))
+		{
+			ind.fitnessScaling=1 - 0.5 * q^2;
+		}
+		
+		// if focal individual is mt/wt:
+		if (any(ind.genome1.mutations.id == focalMutId) & all(ind.genome2.mutations.id != focalMutId))
+		{
+			ind.fitnessScaling = 1- 2* 0.5 *p*q;
+		}
+		
+		// if focal individual is wt/mt:
+		if (all(ind.genome1.mutations.id != focalMutId) & any(ind.genome2.mutations.id == focalMutId))
+		{
+			ind.fitnessScaling = 1- 2* 0.5 *p*q;
+		}
+		
+		// if focal individual is wt/wt:		
+		if (all(ind.genome1.mutations.id != focalMutId) & all(ind.genome2.mutations.id != focalMutId))
+		{
+			ind.fitnessScaling = 1- 0.5 * p^2;
+		}
+	
+	}
+	
+	gensToSample = seq(10000, 10400, by=5);
+	if (any(gensToSample == community.tick))
+	{
+		print(paste("generation:", asString(community.tick), sep=" "));
+		
+		cat(paste("MutationIds: "));
+		print(sim.mutations.id);
+		cat(paste("MutationFreqs: "));
+		print(sim.subpopulations.genomes.mutationFrequenciesInGenomes(sim.mutations));
+	}
+}

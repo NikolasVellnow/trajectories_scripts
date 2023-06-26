@@ -1,0 +1,49 @@
+// set up a simple neutral simulation
+initialize() {
+	initializeMutationRate(1e-7);
+	
+	// m1 mutation type: neutral
+	initializeMutationType("m1", 0.5, "f", 0);
+	//initializeMutationType("m2", 0.0, "f", 0.1);
+	
+	// g1 genomic element type: uses m1 for all mutations
+	initializeGenomicElementType("g1", m1, 1.0);
+	
+	// uniform chromosome of length 100 kb with uniform recombination
+	initializeGenomicElement(g1, 0, 99999);
+	// 0.5
+	initializeRecombinationRate(0.00001);
+}
+
+// create a population of 100 individuals
+1 early() {
+	sim.addSubpop("p1", 400);
+}
+
+10000:10400 late() {
+	if(community.tick == 10000) {
+		m1.convertToSubstitution = F;		// allows to track mutations that get fixed from now on
+		muts = sim.mutationsOfType(m1);
+		mutsFreqs = sim.mutationFrequencies(p1, muts);
+		for (i in 0:(size(mutsFreqs)-1)) {
+			if (mutsFreqs[i] >0.2 & mutsFreqs[i] <0.5) {
+				print("We found mutation with ID " + muts[i].id + " and frequency " + mutsFreqs[i] + " at position " + i);  // info about mutation found
+				sim.mutations[i].setSelectionCoeff(0.1);		// set selection coefficient of found mutation
+				print(muts[i].selectionCoeff);
+				break;
+				}
+		}
+
+	}
+	gensToSample = seq(10000,10400, by=5);
+	if(any(gensToSample==community.tick)) {
+		print(paste("generation:", asString(community.tick), sep=" "));
+		cat(paste("MutationIds: "));
+		print(sim.mutations.id);
+		cat(paste("MutationFreqs: "));
+		print(sim.subpopulations.genomes.mutationFrequenciesInGenomes(sim.mutations));
+		//print(sim.subpopulations.genomes);
+		}
+}
+
+
